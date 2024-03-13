@@ -91,7 +91,7 @@ def Balance(BotAddress,BotPrivatekey):
         token_symbol = contract['symbol']
 
         # Send ERC20 tokens
-        send_erc20_tokens(BotAddress, private_key, '#input reciever Address', token_contract_address, token_symbol)
+        send_erc20_tokens(BotAddress, private_key,Reciever, token_contract_address, token_symbol)
 
     
 def worker(BotAddress, BotPrivateKey):
@@ -104,7 +104,7 @@ def get_address_from_private_key(private_key):
 
 
 # BOT เริ่มทำงานพร้อมกัน ทุกๆ ไอดี 
-
+Reciever = '' #ระบุ Address หลัก
 if __name__ == '__main__':
     private_keys = [
     #'PrivateKey',#1
