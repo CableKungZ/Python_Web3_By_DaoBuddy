@@ -1,0 +1,183 @@
+#Base Code By : GamerDoi
+#Modified By : CableKungZ(DaoBuddy)
+
+
+import sys, os, glob
+from web3 import Web3, AsyncWeb3
+import requests
+import json
+import time
+import re
+from eth_account import Account
+
+
+
+def LoadContract(provider, contactAddress):
+    while True:
+        try:
+            if provider.is_connected() :
+                ABIContactLoad = requests.get("https://exp-l1.jibchain.net/api?module=contract&action=getabi&address="+contactAddress)
+                jsonResult = json.loads(ABIContactLoad.text)
+                if jsonResult['status'] == '1':
+                    jsonABI = json.loads(jsonResult['result'])
+                    return provider.eth.contract(address=contactAddress,abi=jsonABI)
+        except:
+            continue
+            # print("load contact fail. Retry.")
+    return None
+
+
+def sendTransaction(txData,account,gasSet = False):
+    txData['nonce'] = w3.eth.get_transaction_count(account.address)    
+    if gasSet and not 'gas' in txData:
+        txData['gas'] = w3.eth.estimate_gas(txData)
+    if gasSet and not 'gasPrice' in txData:
+        txData['gasPrice'] = Web3.to_wei(5, 'gwei') 
+    # print(txData)
+    signedTx = account.sign_transaction(txData)
+
+    tx_hash = w3.eth.send_raw_transaction(signedTx.rawTransaction)
+   
+    print('          tx_hash : ' + str(tx_hash.hex()))
+    print("          transaction confirm.",end='')
+    while True:
+        time.sleep(1)
+        try:
+            tx_receipt = w3.eth.get_transaction_receipt(tx_hash)
+            if tx_receipt is not None:
+                # Get current block number
+                current_block_number = w3.eth.block_number
+                # Get block number of transaction
+                block_number = tx_receipt['blockNumber']
+                # Calculate number of confirmations
+                confirmations = current_block_number - block_number + 1
+                if(confirmations>=1):
+                    print(confirmations)
+                    break
+                else:
+                    print('.',end='')
+        except:
+            print('#',end='')  
+            continue
+            
+    return tx_hash
+
+
+def sendNativeToken(account,toAddress,value):
+    txRaw = {
+        'from': account.address,
+        'to': toAddress,
+        'value': Web3.to_wei(value, 'ether'),
+        'chainId': 8899
+    }
+    hashTx = sendTransaction(txRaw,account,True)
+    
+w3 = Web3(Web3.HTTPProvider('https://rpc-l1.jibchain.net', request_kwargs={'timeout': 90}))
+rpcStatus = False
+counter = 0
+while rpcStatus == False:
+    counter += 1
+    print('HTTP Provider Status : ',end='')
+    rpcStatus = w3.is_connected() == True
+    if rpcStatus == True:
+        print('Online')
+    elif rpcStatus == False and counter > 3:
+        print('Offline')
+        time.sleep(60)
+        exit()
+    elif rpcStatus == False:
+        print('Offline')
+
+print('Loading All Contract ABI')
+CommuDAONFT721 = LoadContract(w3,'0x20724DC1D37E67B7B69B52300fDbA85E558d8F9A')
+DunJasper = LoadContract(w3,'0xe83567Cd0f3Ed2cca21BcE05DBab51707aff2860')
+DunTaoDum = LoadContract(w3,'0xF663c756b6D57724C3B41c8839aB9c7Af83c9751')
+
+def main():
+    AllWallet      =   [["PrivateKey Here"]]
+    account = Account.from_key(AllWallet[0][0])
+    ### SELECT DUNGEON UNEQUIPMENT #
+    Jasper = False
+    TaoDum = True
+
+    if Jasper:
+        Contract = DunJasper
+        DunData    = Contract.functions.nftEquip(account.address).call()
+        while(DunData[0] != 0):
+            if(DunData[9] == True):  #  ถ้าเสตกอยู่ให้เคลม
+                print("     Obtain JASP ")
+                txRaw = Contract.functions.unstake(0).build_transaction({"from": account.address})
+                hashTx = sendTransaction(txRaw,account)
+            elif(DunData[6] != 0):
+                print("     unstake(7)")
+                txRaw = Contract.functions.unstake(7).build_transaction({"from": account.address})
+                hashTx = sendTransaction(txRaw,account)
+            elif(DunData[5] != 0):
+                print("     unstake(6)")
+                txRaw = Contract.functions.unstake(6).build_transaction({"from": account.address})
+                hashTx = sendTransaction(txRaw,account)
+            elif(DunData[4] != 0):
+                print("     unstake(5)")
+                txRaw = Contract.functions.unstake(5).build_transaction({"from": account.address})
+                hashTx = sendTransaction(txRaw,account)
+            elif(DunData[3] != 0):
+                print("     unstake(4)")
+                txRaw = Contract.functions.unstake(4).build_transaction({"from": account.address})
+                hashTx = sendTransaction(txRaw,account)
+            elif(DunData[2] != 0):
+                print("     unstake(3)")
+                txRaw = Contract.functions.unstake(3).build_transaction({"from": account.address})
+                hashTx = sendTransaction(txRaw,account)
+            elif(DunData[1] != 0):
+                print("     unstake(2)")
+                txRaw = Contract.functions.unstake(2).build_transaction({"from": account.address})
+                hashTx = sendTransaction(txRaw,account)
+            elif(DunData[0] != 0):
+                print("     unstake(1)")
+                txRaw = Contract.functions.unstake(1).build_transaction({"from": account.address})
+                hashTx = sendTransaction(txRaw,account)
+            DunData    = Contract.functions.nftEquip(account.address).call()
+        print("  ถอด NFT ทั้งหมดเรียบร้อยแล้ว")  
+    if TaoDum:
+        Contract = DunTaoDum
+        DunData = Contract.functions.nftStatus(account.address).call()
+        print(DunData)
+        while(DunData[0] != 0):
+            if(DunData[9] == True):  #  ถ้าเสตกอยู่ให้เคลม
+                print("     Obtain EE ")
+                txRaw = Contract.functions.unstake(0).build_transaction({"from": account.address})
+                hashTx = sendTransaction(txRaw,account)
+            elif(DunData[6] != 0):
+                print("     unstake(7)")
+                txRaw = Contract.functions.unstake(7).build_transaction({"from": account.address})
+                hashTx = sendTransaction(txRaw,account)
+            elif(DunData[5] != 0):
+                print("     unstake(6)")
+                txRaw = Contract.functions.unstake(6).build_transaction({"from": account.address})
+                hashTx = sendTransaction(txRaw,account)
+            elif(DunData[4] != 0):
+                print("     unstake(5)")
+                txRaw = Contract.functions.unstake(5).build_transaction({"from": account.address})
+                hashTx = sendTransaction(txRaw,account)
+            elif(DunData[3] != 0):
+                print("     unstake(4)")
+                txRaw = Contract.functions.unstake(4).build_transaction({"from": account.address})
+                hashTx = sendTransaction(txRaw,account)
+            elif(DunData[2] != 0):
+                print("     unstake(3)")
+                txRaw = Contract.functions.unstake(3).build_transaction({"from": account.address})
+                hashTx = sendTransaction(txRaw,account)
+            elif(DunData[1] != 0):
+                print("     unstake(2)")
+                txRaw = Contract.functions.unstake(2).build_transaction({"from": account.address})
+                hashTx = sendTransaction(txRaw,account)
+            elif(DunData[0] != 0):
+                print("     unstake(1)")
+                txRaw = Contract.functions.unstake(1).build_transaction({"from": account.address})
+                hashTx = sendTransaction(txRaw,account)
+            DunData    = Contract.functions.nftStatus(account.address).call()
+        print("  ถอด NFT ทั้งหมดเรียบร้อยแล้ว")
+        
+        
+if __name__ == "__main__":
+    main()
