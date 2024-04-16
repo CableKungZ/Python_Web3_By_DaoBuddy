@@ -135,7 +135,7 @@ def apple(address,private_key):
         print("\t3.Claim All")
         print("\t4.Farm Apple Details")
         print("\t*. Exit to main")
-        select = input("\t Select : ")
+        select = input("Select : ")
         print("============================================")
         if select == "1":
             ApplEqiupHero(address, private_key)
@@ -147,6 +147,7 @@ def apple(address,private_key):
             ApplFarmDetail(address)  
         elif select == "*":
             print("Exiting to main program...")
+            os.system('cls')
             break
         else:
             print("Invalid selection")
@@ -220,7 +221,7 @@ def carrot(address,private_key):
         print("\t3.Claim All")
         print("\t4.Farm Carrot Details")
         print("\t*. Back to main")
-        select = input("\t Select : ")
+        select = input(" Select : ")
         print("============================================")
         if select == "1":
             CarrEqiupHero(address, private_key)
@@ -232,6 +233,7 @@ def carrot(address,private_key):
             CarrFarmDetail(address)  
         elif select == "*":
             print("Exiting to main program...")
+            os.system('cls')
             break
         else:
             print("Invalid selection")
