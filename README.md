@@ -1,14 +1,20 @@
-Python Code for Web3 
+# Python Code for Web3
 
-Libary Install
+## Library Installation  
+```bash
 pip install web3 eth-account
 
-How to install
-1. Install Python
-2. open CMD![image](https://github.com/CableKungZ/Web3_CommuDao/assets/64020377/5bdfef6b-9298-459d-93df-11293106ca6f)
-3. Enter and Wait until finished
+```
 
-How to Use Code
-1. Copy any code and paste to Your Python IDE ( VsCode Studio , Python IDE )
-2. Setting Your Account on code
-3. Run
+How to install
+1. Install Python from [python.org](https://www.python.org/)
+2. Open Command Prompt (CMD)
+[image](https://github.com/CableKungZ/Web3_CommuDao/assets/64020377/5bdfef6b-9298-459d-93df-11293106ca6f)
+3. Enter the command and wait until the installation finishes.
+
+
+
+How to Use the Code
+Copy any code from this repository and paste it into your Python IDE (e.g., VSCode, PyCharm, or any Python IDE).
+Configure your account in the code settings.
+Run the code.
