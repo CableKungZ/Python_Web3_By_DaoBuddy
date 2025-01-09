@@ -9,7 +9,7 @@ pip install web3 eth-account
 How to install
 1. Install Python from [python.org](https://www.python.org/)
 2. Open Command Prompt (CMD)
-[image](https://github.com/CableKungZ/Web3_CommuDao/assets/64020377/5bdfef6b-9298-459d-93df-11293106ca6f)
+![image](https://github.com/CableKungZ/Web3_CommuDao/assets/64020377/5bdfef6b-9298-459d-93df-11293106ca6f)
 3. Enter the command and wait until the installation finishes.
 
 
