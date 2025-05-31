@@ -11,6 +11,8 @@ import traceback
 
 
 private_key = "apiKeyHere"
+
+
 CMswapCandleChartAddress = "0x7a90f3F76E88D4A2079E90197DD2661B8FEcA9B6"
 CMswapCandleChartABI = json.loads('[{"inputs":[{"internalType":"address","name":"tokenA","type":"address"},{"internalType":"address","name":"tokenB","type":"address"},{"internalType":"uint256[]","name":"timestamps","type":"uint256[]"},{"internalType":"uint256[]","name":"values","type":"uint256[]"}],"name":"addAreaSeries","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"tokenA","type":"address"},{"internalType":"address","name":"tokenB","type":"address"},{"internalType":"uint256[]","name":"timestamps","type":"uint256[]"},{"internalType":"uint256[]","name":"prices","type":"uint256[]"},{"internalType":"uint256[]","name":"volumes","type":"uint256[]"}],"name":"addCandleStickSeries","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address[]","name":"tokenAs","type":"address[]"},{"internalType":"address[]","name":"tokenBs","type":"address[]"},{"internalType":"uint256[][]","name":"timestampsList","type":"uint256[][]"},{"internalType":"uint256[][]","name":"pricesList","type":"uint256[][]"},{"internalType":"uint256[][]","name":"volumeList","type":"uint256[][]"}],"name":"addCandleStickSeriesBatch","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_chainID","type":"uint256"},{"internalType":"uint256","name":"blockNumber","type":"uint256"}],"name":"updateBlockTime","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"tokenA","type":"address"},{"internalType":"address","name":"tokenB","type":"address"},{"internalType":"uint256","name":"page","type":"uint256"},{"internalType":"uint256","name":"pageSize","type":"uint256"}],"name":"getAreaData","outputs":[{"internalType":"uint256[]","name":"timestamps","type":"uint256[]"},{"internalType":"uint256[]","name":"values","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"tokenA","type":"address"},{"internalType":"address","name":"tokenB","type":"address"}],"name":"getAreaDataCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"tokenA","type":"address"},{"internalType":"address","name":"tokenB","type":"address"},{"internalType":"uint256","name":"page","type":"uint256"},{"internalType":"uint256","name":"pageSize","type":"uint256"}],"name":"getCandleData","outputs":[{"internalType":"uint256[]","name":"timestamps","type":"uint256[]"},{"internalType":"uint256[]","name":"prices","type":"uint256[]"},{"internalType":"uint256[]","name":"volumes","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"tokenA","type":"address"},{"internalType":"address","name":"tokenB","type":"address"}],"name":"getCandleDataCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"lastUpdateBlock","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}]')
 
@@ -161,7 +163,7 @@ def getPumpPro(web3: Web3, pump_address: str, factory_address: str, lastSync: in
                                                  argument_filters={"from": pool_address},
                                                  from_block=lastSync)
 
-            print(f"Token {i+1} - Total Sell logs: {len(token_sell_txs)}, Buy logs: {len(token_buy_txs)}")
+            print(f"Token {i+1} {token_address} - Total Sell logs: {len(token_sell_txs)}, Buy logs: {len(token_buy_txs)}")
 
             token_sell_map = dict(zip(token_sell_txs, token_sell_vals))
             token_buy_map = dict(zip(token_buy_txs, token_buy_vals))
@@ -175,7 +177,7 @@ def getPumpPro(web3: Web3, pump_address: str, factory_address: str, lastSync: in
             for tx_hash, val in token_over_sell + token_over_buy + kkub_over_sell + kkub_over_buy:
                 block_num, block_time = get_block_info(web3, tx_hash)
                 price = 1 / 1_000_000_000
-                print(f"📢 Intitals Pool at TX {tx_hash} | Price: {price} | Block: {block_num} Time: {block_time}")
+                print(f"📢 Intitals Pool (PRO) at TX {tx_hash} | Price: {price} | Block: {block_num} Time: {block_time}")
                 events.append({"block": block_num, "timestamp": block_time, "price": price, "volume": 0})
             for tx in common_sell_txs:
                 token_amount = token_sell_map[tx] / 1e18
@@ -224,8 +226,8 @@ def get_logs(web3, contract_address, abi, event_name, from_block='latest', to_bl
         print(f"⚠️ Error fetching logs for {contract_address}: {e}")
         return [], [], []
 
-    filtered = [(log.transactionHash.hex(), log.args.value) for log in logs if log.args.value < 999999999999999999999999000]
-    over_filtered = [(log.transactionHash.hex(), log.args.value) for log in logs if log.args.value > 999999999999999999999999000]
+    filtered = [(log.transactionHash.hex(), log.args.value) for log in logs if log.args.value < 999999999999999999999000000]
+    over_filtered = [(log.transactionHash.hex(), log.args.value) for log in logs if log.args.value > 999999999999999999999000000]
     
     if not filtered and not over_filtered:
         return [], [], []
@@ -235,75 +237,85 @@ def get_logs(web3, contract_address, abi, event_name, from_block='latest', to_bl
         return list(txhashes), list(values), over_filtered
     return [], [], over_filtered
 
-def featData(web3, raw_data,pair, chainId):
+def featData(web3, raw_data, pair):
+    from decimal import Decimal
+    import time
+    from web3.exceptions import TransactionNotFound
+
     contract = web3.eth.contract(address=CMswapCandleChartAddress, abi=CMswapCandleChartABI)
     address = web3.eth.account.from_key(private_key).address
 
-    tokenAs = []
-    tokenBs = []
-    timestampsList = []
-    pricesList = []
-    volumeList = []
+    def chunk_data(data, size):
+        for i in range(0, len(data), size):
+            yield data[i:i + size]
 
-    for token_info in raw_data:
-        token = token_info["token"]
-        events = token_info["events"]
+    for idx, chunk in enumerate(chunk_data(raw_data, 1)):  # ส่งทีละ 1 token
+        tokenAs = []
+        tokenBs = []
+        timestampsList = []
+        pricesList = []
+        volumeList = []
 
-        timestamps = []
-        prices = []
-        volumes = []
+        for token_info in chunk:
+            token = token_info["token"]
+            events = token_info["events"]
 
-        for event in events:
-            timestamps.append(event.get("timestamp", 0))
-            prices.append(int(Decimal(str(event["price"])) * Decimal(1e18)))
-            volumes.append(int(Decimal(str(event["volume"])) * Decimal(1e18)))
+            timestamps = []
+            prices = []
+            volumes = []
 
-        tokenAs.append(token)
-        tokenBs.append(pair) 
-        timestampsList.append(timestamps)
-        pricesList.append(prices)
-        volumeList.append(volumes)
+            for event in events:
+                timestamps.append(event.get("timestamp", 0))
+                prices.append(int(Decimal(str(event["price"])) * Decimal(1e18)))
+                volumes.append(int(Decimal(str(event["volume"])) * Decimal(1e18)))
 
-    nonce = web3.eth.get_transaction_count(address)
+            tokenAs.append(token)
+            tokenBs.append(pair)
+            timestampsList.append(timestamps)
+            pricesList.append(prices)
+            volumeList.append(volumes)
 
-    print(tokenAs)
-    print(tokenBs)
-    print(timestampsList)
-    print(pricesList)
-    print(volumeList)
+        nonce = web3.eth.get_transaction_count(address)
 
-    tx = contract.functions.addCandleStickSeriesBatch(
-        tokenAs,
-        tokenBs,
-        timestampsList,
-        pricesList,
-        volumeList
-    ).build_transaction({
-        'from': address,
-        'nonce': nonce,
-        'gas': 8_000_000,
-        'gasPrice': web3.to_wei('0.00000001', 'gwei'),
-        'chainId': 88991001
-    })
+        print(f"\n📦 Sending batch {idx + 1} with {len(chunk)} token(s)...")
+        print("tokenAs:", tokenAs)
+        print("tokenBs:", tokenBs)
+        print("timestamps:", timestampsList)
+        print("prices:", pricesList)
+        print("volumes:", volumeList)
 
-    signed_tx = web3.eth.account.sign_transaction(tx, private_key=private_key)
-    tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
-    print(f"✅ addCandleStickSeriesBatch Tx sent: {tx_hash.hex()}")
+        tx = contract.functions.addCandleStickSeriesBatch(
+            tokenAs,
+            tokenBs,
+            timestampsList,
+            pricesList,
+            volumeList
+        ).build_transaction({
+            'from': address,
+            'nonce': nonce,
+            'gas': 8_000_000,
+            'gasPrice': web3.to_wei('10', 'gwei'),  # ปรับ gas price
+            'chainId': 88991001
+        })
 
-    while True:
-        try:
-            receipt = cm_web3.eth.get_transaction_receipt(tx_hash)
-            if receipt is not None:
-                if receipt.status == 1:
-                    print(f"✅ Confirmed: {tx_hash.hex()} in block {receipt.blockNumber}")
-                else:
-                    print(f"❌ Transaction failed: {tx_hash.hex()}")
-                break
-        except TransactionNotFound:
-            time.sleep(0.1)
+        signed_tx = web3.eth.account.sign_transaction(tx, private_key=private_key)
+        tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
+        print(f"✅ Batch {idx + 1} sent: {tx_hash.hex()}")
 
-    max_block = max([max([e["block"] for e in token_info["events"]] or [0]) for token_info in raw_data] or [0])
- 
+        while True:
+            try:
+                receipt = web3.eth.get_transaction_receipt(tx_hash)
+                if receipt is not None:
+                    if receipt.status == 1:
+                        print(f"✅ Confirmed: {tx_hash.hex()} in block {receipt.blockNumber}")
+                    else:
+                        print(f"❌ Transaction failed: {tx_hash.hex()}")
+                    break
+            except TransactionNotFound:
+                time.sleep(1)  # รอ 1 วินาที ก่อนเช็คใหม่
+
+        time.sleep(3)  # พักระหว่าง batch 3 วินาที
+
 def updateBlock(chainId,_block):
     contract = cm_web3.eth.contract(address=CMswapCandleChartAddress, abi=CMswapCandleChartABI)
     address = kub_web3.eth.account.from_key(private_key).address
@@ -342,17 +354,17 @@ def worker():
 
     print(f"Fetching Pump Lite Data...")
     pump_lite_data = getPumpLite(kub_web3, kub_PumpLiteAddress, V3_KubADDr,lastSyncBlock_KUB)
+
     print(f"Fetching Pump Pro Data...")
     pump_pro_data = getPumpPro(kub_web3, kub_PumpProAddress, V3_KubADDr,lastSyncBlock_KUB)
 
 
     if pump_lite_data and len(pump_lite_data) > 0:
-        featData(cm_web3, pump_lite_data, CMM, 96)
-        time.sleep(5)
+        featData(cm_web3, pump_lite_data, CMM) 
+      
         
     if pump_pro_data and len(pump_pro_data) > 0:
-        featData(cm_web3, pump_pro_data, KKUB, 96)
-        time.sleep(5)
+        featData(cm_web3, pump_pro_data, KKUB)
     
     current_block = kub_web3.eth.block_number
     updateBlock(96, current_block)
@@ -377,3 +389,4 @@ if __name__ == "__main__":
         logging.error("Bot down: %s", str(e))
         logging.error(traceback.format_exc()) 
         print(f"Bot down: with reason {e}")
+
