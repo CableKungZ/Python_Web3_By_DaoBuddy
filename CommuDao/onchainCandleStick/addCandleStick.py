@@ -11,7 +11,6 @@ import traceback
 
 
 private_key = "apiKeyHere"
-
 CMswapCandleChartAddress = "0x7a90f3F76E88D4A2079E90197DD2661B8FEcA9B6"
 CMswapCandleChartABI = json.loads('[{"inputs":[{"internalType":"address","name":"tokenA","type":"address"},{"internalType":"address","name":"tokenB","type":"address"},{"internalType":"uint256[]","name":"timestamps","type":"uint256[]"},{"internalType":"uint256[]","name":"values","type":"uint256[]"}],"name":"addAreaSeries","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"tokenA","type":"address"},{"internalType":"address","name":"tokenB","type":"address"},{"internalType":"uint256[]","name":"timestamps","type":"uint256[]"},{"internalType":"uint256[]","name":"prices","type":"uint256[]"},{"internalType":"uint256[]","name":"volumes","type":"uint256[]"}],"name":"addCandleStickSeries","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address[]","name":"tokenAs","type":"address[]"},{"internalType":"address[]","name":"tokenBs","type":"address[]"},{"internalType":"uint256[][]","name":"timestampsList","type":"uint256[][]"},{"internalType":"uint256[][]","name":"pricesList","type":"uint256[][]"},{"internalType":"uint256[][]","name":"volumeList","type":"uint256[][]"}],"name":"addCandleStickSeriesBatch","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_chainID","type":"uint256"},{"internalType":"uint256","name":"blockNumber","type":"uint256"}],"name":"updateBlockTime","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"tokenA","type":"address"},{"internalType":"address","name":"tokenB","type":"address"},{"internalType":"uint256","name":"page","type":"uint256"},{"internalType":"uint256","name":"pageSize","type":"uint256"}],"name":"getAreaData","outputs":[{"internalType":"uint256[]","name":"timestamps","type":"uint256[]"},{"internalType":"uint256[]","name":"values","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"tokenA","type":"address"},{"internalType":"address","name":"tokenB","type":"address"}],"name":"getAreaDataCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"tokenA","type":"address"},{"internalType":"address","name":"tokenB","type":"address"},{"internalType":"uint256","name":"page","type":"uint256"},{"internalType":"uint256","name":"pageSize","type":"uint256"}],"name":"getCandleData","outputs":[{"internalType":"uint256[]","name":"timestamps","type":"uint256[]"},{"internalType":"uint256[]","name":"prices","type":"uint256[]"},{"internalType":"uint256[]","name":"volumes","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"tokenA","type":"address"},{"internalType":"address","name":"tokenB","type":"address"}],"name":"getCandleDataCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"lastUpdateBlock","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}]')
 
@@ -304,7 +303,6 @@ def featData(web3, raw_data,pair, chainId):
             time.sleep(0.1)
 
     max_block = max([max([e["block"] for e in token_info["events"]] or [0]) for token_info in raw_data] or [0])
-    updateBlock(chainId,max_block)
  
 def updateBlock(chainId,_block):
     contract = cm_web3.eth.contract(address=CMswapCandleChartAddress, abi=CMswapCandleChartABI)
@@ -347,17 +345,19 @@ def worker():
     print(f"Fetching Pump Pro Data...")
     pump_pro_data = getPumpPro(kub_web3, kub_PumpProAddress, V3_KubADDr,lastSyncBlock_KUB)
 
-    block_updated = False
 
     if pump_lite_data and len(pump_lite_data) > 0:
         featData(cm_web3, pump_lite_data, CMM, 96)
-        block_updated = True
+        time.sleep(5)
+        
     if pump_pro_data and len(pump_pro_data) > 0:
         featData(cm_web3, pump_pro_data, KKUB, 96)
-        block_updated = True
-    if block_updated:
-        current_block = kub_web3.eth.block_number
-        updateBlock(96, current_block)
+        time.sleep(5)
+    
+    current_block = kub_web3.eth.block_number
+    updateBlock(96, current_block)
+    print("Sleep for 5 mins.")
+    time.sleep(300) ## Update every 5 minutes
 
 
 
