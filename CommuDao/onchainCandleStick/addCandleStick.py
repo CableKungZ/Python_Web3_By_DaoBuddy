@@ -57,6 +57,7 @@ def get_block_info(web3, tx_hash):
         return block_number, block_timestamp
     except Exception as e:
         print(f"⚠️ Error fetching block info for tx {tx_hash}: {e}")
+        logging.error("Error fetching block info for tx %s: %s", tx_hash, e)
         return 0, 0
     
 def getPumpLite(web3: Web3, pump_address: str, factory_address: str, lastSync: int):
@@ -133,6 +134,7 @@ def getPumpLite(web3: Web3, pump_address: str, factory_address: str, lastSync: i
 
         except Exception as e:
             print(f"⚠️ Error processing token index {i + 1}: {e}")
+            logging.error("Error Processing PumpLite Token logs for index %d %s: %s", i+1, token_address, e)
 
     print(f"✅ Total tokens processed: {len(result)}")
     return result
@@ -208,6 +210,7 @@ def getPumpPro(web3: Web3, pump_address: str, factory_address: str, lastSync: in
 
         except Exception as e:
             print(f"⚠️ Error processing token index {i + 1}: {e}")
+            logging.error("Error Processing PumpPro Token logs for index %d %s: %s", i+1, token_address, e)
 
     print(f"✅ Total tokens processed: {len(result)}")
     return result
@@ -224,7 +227,12 @@ def get_logs(web3, contract_address, abi, event_name, from_block='latest', to_bl
         )
     except Exception as e:
         print(f"⚠️ Error fetching logs for {contract_address}: {e}")
+        logging.error("Error fetching logs for %s: %s", contract_address, e)
+
         return [], [], []
+    
+    for log in logs:
+        print(log)
 
     filtered = [(log.transactionHash.hex(), log.args.value) for log in logs if log.args.value < 999999999999999999999000000]
     over_filtered = [(log.transactionHash.hex(), log.args.value) for log in logs if log.args.value > 999999999999999999999000000]
@@ -238,9 +246,6 @@ def get_logs(web3, contract_address, abi, event_name, from_block='latest', to_bl
     return [], [], over_filtered
 
 def featData(web3, raw_data, pair):
-    from decimal import Decimal
-    import time
-    from web3.exceptions import TransactionNotFound
 
     contract = web3.eth.contract(address=CMswapCandleChartAddress, abi=CMswapCandleChartABI)
     address = web3.eth.account.from_key(private_key).address
@@ -310,6 +315,8 @@ def featData(web3, raw_data, pair):
                         print(f"✅ Confirmed: {tx_hash.hex()} in block {receipt.blockNumber}")
                     else:
                         print(f"❌ Transaction failed: {tx_hash.hex()}")
+                        logging.error("Transaction failed: at Block %s with hash %s", receipt.blockNumber, tx_hash.hex())
+                        logging.error("tokenAs: %s, tokenBs: %s, timestamps: %s, prices: %s, volumes: %s", tokenAs, tokenBs, timestampsList, pricesList, volumeList)
                     break
             except TransactionNotFound:
                 time.sleep(1)  # รอ 1 วินาที ก่อนเช็คใหม่
@@ -358,6 +365,8 @@ def worker():
     print(f"Fetching Pump Pro Data...")
     pump_pro_data = getPumpPro(kub_web3, kub_PumpProAddress, V3_KubADDr,lastSyncBlock_KUB)
 
+    
+
 
     if pump_lite_data and len(pump_lite_data) > 0:
         featData(cm_web3, pump_lite_data, CMM) 
@@ -369,7 +378,7 @@ def worker():
     current_block = kub_web3.eth.block_number
     updateBlock(96, current_block)
     print("Sleep for 5 mins.")
-    time.sleep(300) ## Update every 5 minutes
+    time.sleep(300) ## Update every 5 minutes 
 
 
 
@@ -389,4 +398,3 @@ if __name__ == "__main__":
         logging.error("Bot down: %s", str(e))
         logging.error(traceback.format_exc()) 
         print(f"Bot down: with reason {e}")
-
